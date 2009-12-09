@@ -1,0 +1,92 @@
+# .screenrc
+# jas osborne
+# jaosborn@amazon.com
+#
+# Created: 17 Jun 1996
+# Last Modified: 5 Sep 2006
+#
+#
+
+# visual bell
+vbell on
+vbell_msg "   **beep**  "
+activity "%c activity -> %n%f %t"
+bell_msg "%c bell -> %n%f %t^G"
+
+# detach automatically on connection loss
+autodetach on
+
+# keep buffers out of tmp
+bufferfile $HOME/.screen_exchange
+
+# skip intro
+startup_message off
+
+# more history
+defscrollback 5120
+
+# sanitize
+shell zsh
+crlf off
+setenv DISPLAY ':0'
+setenv LANG en_US.UTF-8
+setenv TERM xterm-256color
+setenv LC_CTYPE en_US.UTF-8
+deflogin off
+zombie cr
+verbose on
+escape ^Dd
+defutf8 on
+defflow off
+nonblock on
+multiuser off
+aclchg :window: +x select
+hardcopy_append off
+altscreen on
+attrcolor b ".I"
+
+# caption
+caption splitonly
+caption string "%{= kr}%n %t"
+
+# logout msg on detach
+pow_detach_msg "Screen session \$LOGNAME \$:cr:\$:nl:ended."
+
+# statusbars
+#hardstatus alwayslastline string "%{gk}[ %{G}%H %{g}][%= %{wk}%?%-Lw%?%{r}(%{W}%n*%f %t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B} %m/%d %{W}%c %{g}]
+hardstatus alwayslastline "%{-b gk}%-w%{+b kg}%50>%n %t%{-b gk}%+w %=%C%<"
+#hardstatus alwayslastline "%{= kr}%?%-Lw%?%{= kc}%n*%f %t%?(%u)%?%{= kr}%?%+Lw%?  %=%{= kR}|%{= kc}%l%{= kR}|%{= kc}%c:%s%{= kR}|%{= kc}${HOSTSHORT}%{= kR}|"
+
+# highlighting color
+#sorendition YK
+
+# bindings
+bind s	select jas
+bindkey "^[[5;2~" eval "copy" "stuff ^u"
+bindkey -m "^[[5;2~" stuff ^u
+bindkey -m "^[[6;2~" stuff ^d
+bind 'L' screen cmatrix -f -a -u 8
+bind 'I' login on
+bind 'O' login off
+bind ^Q mapdefault
+bind ^S
+bind ^j focus down
+bind ^k focus up
+bind ^t focus top
+bind ^b focus bottom
+bindkey "^[[c" next
+bindkey "^[[d" prev
+bindkey "^[[b" focus
+
+#screen	-T xterm-256color -t		irc		0	epic5 jas irc.amazon.com
+#screen	-T xterm-256color -M -t	mail		0	muttng
+screen	-T xterm-256color -t		zsh		0
+screen	-T xterm-256color -t		zsh		1
+screen	-T xterm-256color -t		zsh		2
+screen	-T xterm-256color -t		zsh		3
+screen	-T xterm-256color -t		zsh		4
+select 0
+
+# erase background with current bg color 
+#defbce "on" 
+

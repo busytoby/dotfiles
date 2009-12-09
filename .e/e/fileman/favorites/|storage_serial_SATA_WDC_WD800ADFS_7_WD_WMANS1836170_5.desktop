@@ -1,0 +1,9 @@
+[Desktop Entry]
+Encoding=UTF-8
+Type=Link
+X-Enlightenment-Type=Removable
+X-Enlightenment-Removable-State=Full
+Name=usr
+Icon=drive-harddisk
+Comment=Removable Device
+URL=file://org/freedesktop/Hal/devices/volume_uuid_6b8e9076_7e05_4d35_a5eb_ddc176863668
