@@ -75,7 +75,12 @@
   ;; If you edit it by hand, you could mess it up, so be careful.
   ;; Your init file should contain only one such instance.
   ;; If there is more than one, they won't work right.
- '(default ((t (:inherit nil :stipple nil :background "black" :foreground "white" :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 108 :width normal :foundry "unknown" :family "DejaVu Sans Mono"))))
+ '(default ((t (:inherit nil :stipple nil
+                :background "black" :foreground "white"
+                :inverse-video nil :box nil :strike-through nil
+                :overline nil :underline nil :slant normal :weight normal
+                :height 108 :width normal :foundry "unknown"
+                :family "DejaVu Sans Mono"))))
  '(font-lock-builtin-face ((t (:foreground "#FFA100"))))
  '(font-lock-comment-delimiter-face ((t (:foreground "#F30021"))))
  '(font-lock-comment-face ((t (:foreground "#DEEDD0"))))
@@ -92,6 +97,10 @@
  '(minibuffer-prompt ((t (:foreground "#5ED1BA"))))
  '(mumamo-background-chunk-major ((t (:background "dark"))))
  '(mumamo-background-chunk-submode ((t (:background "dark"))))
+ '(mumamo-background-chunk-submode1 ((t (:background "dark"))))
+ '(mumamo-background-chunk-submode2 ((t (:background "dark"))))
+ '(mumamo-background-chunk-submode3 ((t (:background "dark"))))
+ '(mumamo-background-chunk-submode4 ((t (:background "dark"))))
  '(rngalt-validation-header-bottom ((t (:foreground "white"))))
  '(rngalt-validation-header-top ((t (:foreground "RGB:87/CE/FA"))))
  '(twit-author-face ((t (:weight bold :height 1.0 :family "mono"))))
@@ -109,6 +118,9 @@
 (require 'emms-player-mpg321-remote)
 (emms-devel)
 (emms-default-players)
+(emms-lastfm)
+(emms-lastfm-activate)
+(emms-lastfm-enable)
 (push 'emms-player-mpg321-remote emms-player-list)
 (push 'emms-player-mplayer emms-player-list)
 (push 'emms-player-mplayer-playlist emms-player-list)
@@ -120,7 +132,10 @@
    emms-show-format "np: %s")
 
 (setq tags-table-list
-      '("~/.emacs.d" "~/sandbox/clearmyrecord/trunk/TAGS" "~/sandbox/hard2hire/trunk/TAGS" "~/sandbox/origami/trunk/TAGS"))
+      '("~/.emacs.d"
+        "~/sandbox/clearmyrecord/trunk/TAGS"
+        "~/sandbox/hard2hire/trunk/TAGS"
+        "~/sandbox/origami/trunk/TAGS"))
 
 (require 'fuzzy-format)
 (setq fuzzy-format-default-indent-tabs-mode nil
@@ -173,8 +188,7 @@
             (auto-fill-mode t) ;;physical line break
 ;;            (flyspell-mode t) ;;spellchek on the fly
 ;;            (ispell-change-dictionary "british" nil)
-            )
-)
+            ))
 
 ;; to use M$ style keyboard bindings, uncomment the following
 (pc-selection-mode)
