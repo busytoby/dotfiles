@@ -433,7 +433,8 @@ available from table then this is called instead of
 `compleating-read' with the same parameters."
   (let* ((orig (buffer-substring-no-properties start (point)))
          (completion (try-completion orig table predicate))
-         (completing-fun (if altcompl altcompl 'completing-read)))
+         (completing-fun (if altcompl altcompl 'completing-read))
+         (completion-ignore-case t))
     (cond ((not (or completion completing-fun))
            (if (string= orig "")
                (message "No completions available")
@@ -607,7 +608,7 @@ major mode is derived from `nxml-mode'."
   :set (lambda (sym val)
          (set-default sym val)
          (rngalt-update-validation-header-overlay-everywhere))
-  :group 'nxml
+  :group 'relax-ng
   :group 'nxhtml)
 
 (define-toggle rngalt-minimal-validation-header t
@@ -616,7 +617,7 @@ See also `rngalt-display-validation-header'."
   :set (lambda (sym val)
          (set-default sym val)
          (rngalt-update-validation-header-overlay-everywhere))
-  :group 'nxml
+  :group 'relax-ng
   :group 'nxhtml)
 
 (defface rngalt-validation-header-top
