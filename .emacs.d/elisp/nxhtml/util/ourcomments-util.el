@@ -369,6 +369,27 @@ To create a menu item something similar to this can be used:
   "Unfill using the fill function FN."
   (let ((fill-column (1+ (point-max)))) (call-interactively fn)))
 
+(defvar fill-dwim-state nil)
+(defvar fill-dwim-mark nil)
+
+;;;###autoload
+(defun fill-dwim ()
+  "Fill or unfill paragraph or region."
+  (interactive)
+  (or (not fill-dwim-mark)
+      (equal (point-marker) fill-dwim-mark)
+      (setq fill-dwim-state nil))
+  (if mark-active
+      (progn
+        (if fill-dwim-state
+            (call-interactively 'unfill-region)
+          (call-interactively 'fill-region))
+        (setq deactivate-mark nil))
+    (if fill-dwim-state
+        (call-interactively 'unfill-paragraph)
+      (call-interactively 'fill-paragraph)))
+  (setq fill-dwim-mark (copy-marker (point)))
+  (setq fill-dwim-state (not fill-dwim-state)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Widgets
@@ -416,6 +437,7 @@ To create a menu item something similar to this can be used:
 
 ;; Changed from move-beginning-of-line to beginning-of-line to support
 ;; physical-line-mode.
+;; Fix-me: use end-of-visual-line etc.
 ;;;###autoload
 (defun ourcomments-move-beginning-of-line(arg)
   "Move point to beginning of line or indentation.
@@ -1536,14 +1558,18 @@ of those in for example common web browsers."
 
 (defun emacs-restart-in-kill ()
   "Last step in restart Emacs and start `server-mode' if on before."
-  (let ((restart-args (when ourcomments-restart-server-mode
-                        ;; Delay 3+2 sec to be sure the old server has stopped.
-                        (list "--eval=(run-with-idle-timer 5 nil 'server-mode 1)")))
-        ;; Fix-me: There is an Emacs bug here, default-directory shows
-        ;; up in load-path in the new Eamcs if restart-args is like
-        ;; this, but not otherwise. And it has w32 file syntax. The
-        ;; work around below is the best I can find at the moment.
-        (default-directory (file-name-as-directory (expand-file-name (car load-path)))))
+  (let* ((restart-args (when ourcomments-restart-server-mode
+                         ;; Delay 3+2 sec to be sure the old server has stopped.
+                         (list "--eval=(run-with-idle-timer 5 nil 'server-mode 1)")))
+         ;; Fix-me: There is an Emacs bug here, default-directory shows
+         ;; up in load-path in the new Eamcs if restart-args is like
+         ;; this, but not otherwise. And it has w32 file syntax. The
+         ;; work around below is the best I can find at the moment.
+         (first-path (catch 'first
+                       (dolist (p load-path)
+                         (when (file-directory-p p)
+                           (throw 'first p)))))
+         (default-directory (file-name-as-directory (expand-file-name first-path))))
     (apply 'call-process (ourcomments-find-emacs) nil 0 nil restart-args)
     ;; Wait to give focus to new Emacs instance:
     (sleep-for 3)))

@@ -2,8 +2,8 @@
 ;;
 ;; Author: Lennart Borgman (lennart O borgman A gmail O com)
 ;; Created: 2009-11-26 Thu
-(defconst web-vcs:version "0.6") ;; Version:
-;; Last-Updated: 2009-12-01 Tue
+(defconst web-vcs:version "0.61") ;; Version:
+;; Last-Updated: 2009-12-11 Fri
 ;; URL:
 ;; Keywords:
 ;; Compatibility:
@@ -19,7 +19,7 @@
 ;; Update file trees within Emacs from VCS systems using information
 ;; on their web pages.
 ;;
-;; See the example `nxhtml-download'.
+;; See the command `nxhtml-download'.
 ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -48,25 +48,40 @@
 ;;
 ;;; Code:
 
+(eval-when-compile (require 'cl)) ;; assert
+
+(defgroup web-vcs nil
+  "Customization group for web-vcs."
+  :group 'programming
+  :group 'development)
+
 (defcustom web-vcs-links-regexp
   `(
-    (lp
-     "http://www.launchpad.com/ uses this 2009-11-29\nwith Loggerhead 1.10, generic?"
+    (lp ;; Id
+     ;; Comment:
+     "http://www.launchpad.com/ uses this 2009-11-29 with Loggerhead 1.10 (generic?)"
+     ;; Files URL regexp:
      ,(rx "href=\""
-          (submatch
-           (regexp ".*/download/[^\"]*"))
+          (submatch (regexp ".*/download/[^\"]*"))
           "\"")
+     ;; Dirs URL regexp:
      ,(rx "href=\""
-          (submatch
-           (regexp ".*%3A/[^\"]*/"))
+          (submatch (regexp ".*%3A/[^\"]*/"))
           "\"")
+     ;; File name URL part regexp:
      "\\([^\/]*\\)$"
+     ;; Page revision regexp:
      ,(rx "for revision"
           (+ whitespace)
           "<span>"
           (submatch (+ digit))
           "</span>")
-     ;;"/head%3A/\\([^/]*\\)/$"
+     ;; Release revision regexp:
+     ,(rx "/"
+          (submatch (+ digit))
+          "\"" (+ (not (any ">"))) ">"
+          (optional "Release ")
+          (+ digit) "." (+ digit) "<")
      )
     )
   "Regexp patterns for matching links on a VCS web page.
@@ -81,9 +96,21 @@ The patterns are grouped by VCS web system type.
            (regexp :tag "Files URL regexp")
            (regexp :tag "Dirs URL regexp")
            (regexp :tag "File name URL part regexp")
-           (regexp :tag "Revision regexp")
-           ;;(regexp :tag "Subdir regexp")
+           (regexp :tag "Page revision regexp")
+           (regexp :tag "Release revision regexp")
            ))
+  :group 'web-vcs)
+
+(defface web-vcs-gold
+  '((((background dark)) (:background "gold" :foreground "black"))
+    (t (:background "gold")))
+  "Face for hi-lock mode."
+  :group 'web-vcs)
+
+(defface web-vcs-red
+  '((((background dark)) (:background "red" :foreground "black"))
+    (t (:background "red")))
+  "Face for hi-lock mode."
   :group 'web-vcs)
 
 
@@ -149,7 +176,7 @@ If TEST is non-nil then do not download, just list the files."
           (switch-to-buffer-other-window "*Messages*"))
         (goto-char (point-max))
         (insert "\n")
-        (insert (propertize (format "\n\nWeb-Vcs Download: %S\n" url) 'face 'hi-gold))
+        (insert (propertize (format "\n\nWeb-Vcs Download: %S\n" url) 'face 'web-vcs-gold))
         (insert "\n")
         (redisplay t)
         (set-window-point (selected-window) (point-max))
@@ -195,18 +222,17 @@ If TEST is non-nil then do not download, just list the files."
           (basic-save-buffer)
           (kill-buffer))
         (message "-----------------")
-        (if (> moved 0)
-            (web-vcs-message-with-face 'hi-yellow
-                                       "Download ready, %s. %i files updated (old versions renamed to *.moved)"
-                                       (web-vcs-nice-elapsed start-time (current-time))
-                                       moved)
-          (web-vcs-message-with-face 'hi-green
-                                     "Download ready, %s"
-                                     (web-vcs-nice-elapsed start-time (current-time))))))))
+        (web-vcs-message-with-face 'web-vcs-gold "Web-Vcs Download Ready: %S" url)
+        (web-vcs-message-with-face 'web-vcs-gold "  Time elapsed: %S"
+                                   (web-vcs-nice-elapsed start-time (current-time)))
+        (when (> moved 0)
+          (web-vcs-message-with-face 'hi-yellow
+                                     "  %i files updated (old versions renamed to *.moved)"
+                                     moved))))))
 
 
 (defun web-vcs-get-files-on-page-1 (vcs-rec url recursive dl-dir dl-revision test)
-  "Download files listed by WEB-VCS on web page URL.
+  "Download files listed by VCS-REC on web page URL.
 VCS-REC should be an entry like the entries in the list
 `web-vcs-links-regexp'.
 
@@ -214,6 +240,8 @@ If RECURSIVE go into sub folders on the web page and download
 files from them too.
 
 Place the files under DL-DIR.
+
+The revision on the page URL should match DL-REVISION.
 
 If TEST is non-nil then do not download, just list the files."
   (let* ((files-href-regexp  (nth 2 vcs-rec))
@@ -234,9 +262,9 @@ If TEST is non-nil then do not download, just list the files."
       (unless (file-directory-p dl-dir)
         (make-directory dl-dir t))
       ;; Get revision number
-      (setq this-page-revision (web-vcs-get-revision-from-url-buf vcs-rec url url-buf))
+      (setq this-page-revision (web-vcs-get-revision-from-url-buf vcs-rec url-buf url))
       (unless (string= dl-revision this-page-revision)
-        (web-vcs-message-with-face 'hi-salmon "Revision on %S is %S, but should be %S"
+        (web-vcs-message-with-face 'web-vcs-red "Revision on %S is %S, but should be %S"
                                    url this-page-revision dl-revision)
         (throw 'command-level nil))
       ;; Find files
@@ -347,16 +375,19 @@ If TEST is non-nil then do not download, just list the files."
 VCS-REC should be an entry like the entries in the list
 `web-vcs-links-regexp'."
   (let ((url-buf (url-retrieve-synchronously url)))
-    (web-vcs-get-revision-from-url-buf vcs-rec url url-buf)))
+    (web-vcs-get-revision-from-url-buf vcs-rec url-buf url)))
 
-(defun web-vcs-get-revision-from-url-buf (vcs-rec url url-buf)
+(defun web-vcs-get-revision-from-url-buf (vcs-rec url-buf url)
+  "Get revision number using VCS-REC.
+VCS-REC should be an entry in the list `web-vcs-links-regexp'.
+The buffer URL-BUF should contain the content on page URL."
   (let ((revision-regexp    (nth 5 vcs-rec)))
     ;; Get revision number
     (with-current-buffer url-buf
       (goto-char (point-min))
       (if (not (re-search-forward revision-regexp nil t))
           (progn
-            (web-vcs-message-with-face 'hi-salmon "Can't find revision number on %S" url)
+            (web-vcs-message-with-face 'web-vcs-red "Can't find revision number on %S" url)
             (throw 'command-level nil))
         (match-string 1)))))
 
@@ -368,6 +399,7 @@ VCS-REC should be an entry like the entries in the list
 ;;; Helpers
 
 (defun web-vcs-contains-file (dir file)
+  "Return t if DIR contain FILE."
   (assert (string= dir (file-name-as-directory (expand-file-name dir))) t)
   (assert (or (string= file (file-name-as-directory (expand-file-name file)))
               (string= file (expand-file-name file))) t)
@@ -416,19 +448,21 @@ Also put FACE on the message in *Messages* buffer."
       (let* ((start (let ((here (point)))
                       (goto-char (point-max))
                       (prog1
-                          (if (bolp) (point-max)
-                            (1+ (point-max)))
+                          (copy-marker
+                           (if (bolp) (point-max)
+                             (1+ (point-max))))
                         (goto-char here))))
              (msg-with-face (propertize (apply 'format format-string args)
                                         'face face)))
         ;; This is for the echo area:
         (message "%s" msg-with-face)
         ;; This is for the buffer:
-        (goto-char (point-max))
-        (backward-char)
-        (unless (eolp) (goto-char (line-end-position)))
-        (put-text-property start (point)
-                           'face face)))))
+        (when (< 0 (length msg-with-face))
+          (goto-char (1- (point-max)))
+          ;;(backward-char)
+          ;;(unless (eolp) (goto-char (line-end-position)))
+          (put-text-property start (point)
+                             'face face))))))
 
 ;; (web-vcs-num-moved "c:/emacs/p/091105/EmacsW32/nxhtml/")
 (defun web-vcs-num-moved (root)
@@ -440,8 +474,19 @@ Also put FACE on the message in *Messages* buffer."
       (when (and (file-directory-p subdir)
                  (not (or (string= "/." (substring subdir -2))
                           (string= "/.." (substring subdir -3)))))
-        (setq files (append files (rdir-get-files subdir file-regexp) nil))))
+        (setq files (append files (web-vcs-rdir-get-files subdir file-regexp) nil))))
     (length files)))
+
+;; Copy of rdir-get-files in ourcomment-util.el
+(defun web-vcs-rdir-get-files (root file-regexp)
+  (let ((files (directory-files root t file-regexp))
+        (subdirs (directory-files root t)))
+    (dolist (subdir subdirs)
+      (when (and (file-directory-p subdir)
+                 (not (or (string= "/." (substring subdir -2))
+                          (string= "/.." (substring subdir -3)))))
+        (setq files (append files (web-vcs-rdir-get-files subdir file-regexp) nil))))
+    files))
 
 (defun web-vcs-contains-moved-files (dl-dir)
   "Return t if there are *.moved files in DL-DIR."
@@ -480,28 +525,54 @@ To learn more about nXhtml visit its home page at URL
     (if (not (y-or-n-p msg))
         (message "Aborted")
       (message "")
-      (let* ((dl-dir (or (when (and (boundp 'nxhtml-install-dir)
-                                    nxhtml-install-dir
+      (let* ((has-nxhtml (and (boundp 'nxhtml-install-dir)
+                              nxhtml-install-dir))
+             (dl-dir (or (when (and has-nxhtml
                                     (yes-or-no-p
                                      (format "Update current nXhtml files (%s)? "
                                              nxhtml-install-dir)))
                            nxhtml-install-dir)
                          (read-directory-name "Download nXhtml to: ")))
+             ;; Fix-me: ask for latest revision or release, maybe also
+             ;; rev number? Can't do that now because of the Emacs bug
+             ;; that affects `nxhtml-get-release-revision'.
              (revision nil)
-             (do-byte (when (string= dl-dir nxhtml-install-dir)
+             (do-byte (when (and has-nxhtml
+                                 (string= dl-dir nxhtml-install-dir))
                         (y-or-n-p "Do you want to byte compile the files after downloading? "))))
         ;; http://bazaar.launchpad.net/%7Enxhtml/nxhtml/main/files/322
         ;; http://bazaar.launchpad.net/%7Enxhtml/nxhtml/main/files/head%3A/"
         (nxhtml-download-1 dl-dir revision do-byte)))))
 
+
+;; Fix-me: Does not work, Emacs Bug
+;; http://emacsbugs.donarmstrong.com/cgi-bin/bugreport.cgi?bug=5103
+;; (nxhtml-get-release-revision)
+(defun nxhtml-get-release-revision ()
+  "Get revision number for last release."
+  (let* ((all-rev-url "http://code.launchpad.net/%7Enxhtml/nxhtml/main")
+         (url-buf (url-retrieve-synchronously all-rev-url))
+         (vcs-rec (or (assq 'lp web-vcs-links-regexp)
+                      (error "Does not know web-cvs 'lp")))
+         (rel-ver-regexp (nth 6 vcs-rec))
+         )
+    (message "%S" url-buf)
+    (with-current-buffer url-buf
+      (when (re-search-forward rel-ver-regexp nil t)
+        (match-string 1)))))
+
 (defun nxhtml-download-1 (dl-dir revision do-byte)
   "Download nXhtml to directory DL-DIR.
 If REVISION is nil download latest revision, otherwise the
-specified one."
-  (let* ((base-link "http://bazaar.launchpad.net/%7Enxhtml/nxhtml/main/files/")
-         (rev-link (if revision (number-to-string revision) "head%3A/"))
-         (full-link (concat base-link rev-link)))
-    (when (web-vcs-get-files-from-root 'lp full-link dl-dir)
+specified one.
+
+If DO-BYTE is non-nil byte compile nXhtml after download."
+  (let* ((base-url "http://bazaar.launchpad.net/%7Enxhtml/nxhtml/main/")
+         (files-url (concat base-url "files/"))
+         (revs-url  (concat base-url "changes/"))
+         (rev-part (if revision (number-to-string revision) "head%3A/"))
+         (full-root-url (concat files-url rev-part)))
+    (when (web-vcs-get-files-from-root 'lp full-root-url dl-dir)
       (when do-byte
         (sit-for 10)
         (web-vcs-message-with-face 'hi-yellow "Will start byte compilation of nXhtml in 10 seconds")

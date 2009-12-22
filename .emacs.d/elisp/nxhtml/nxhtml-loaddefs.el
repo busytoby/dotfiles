@@ -148,7 +148,7 @@ See `as-external-alist' for more information.
 ;;;***
 
 ;;;### (autoloads (chart-make-chart chart-complete) "chart" "util/chart.el"
-;;;;;;  (19173 56140))
+;;;;;;  (19234 46115))
 ;;; Generated autoloads from util/chart.el
 
 (autoload 'chart-complete "chart" "\
@@ -286,7 +286,7 @@ point is at a hexadecimal colour:
 ;;;***
 
 ;;;### (autoloads (css-palette-global-mode css-palette css-palette-mode)
-;;;;;;  "css-palette" "util/css-palette.el" (18795 27308))
+;;;;;;  "css-palette" "util/css-palette.el" (19234 46173))
 ;;; Generated autoloads from util/css-palette.el
 
 (autoload 'css-palette-mode "css-palette" "\
@@ -550,7 +550,7 @@ such palette into a css-file as hexadecimal color palette.
 ;;;***
 
 ;;;### (autoloads (hfyview-frame hfyview-window hfyview-region hfyview-buffer)
-;;;;;;  "hfyview" "util/hfyview.el" (19206 60274))
+;;;;;;  "hfyview" "util/hfyview.el" (19234 64700))
 ;;; Generated autoloads from util/hfyview.el
 
 (autoload 'hfyview-buffer "hfyview" "\
@@ -591,7 +591,7 @@ With command prefix also show html source in other window.
 ;;;***
 
 ;;;### (autoloads (hl-needed-mode hl-needed) "hl-needed" "util/hl-needed.el"
-;;;;;;  (19218 42180))
+;;;;;;  (19234 49132))
 ;;; Generated autoloads from util/hl-needed.el
 
 (let ((loads (get 'hl-needed 'custom-loads))) (if (member '"hl-needed" loads) nil (put 'hl-needed 'custom-loads (cons '"hl-needed" loads))))
@@ -828,8 +828,8 @@ See `mlinks-mode' for more information on Mlinks mode.
 ;;;***
 
 ;;;### (autoloads (mumamo-multi-major-modep mumamo-mark-for-refontification
-;;;;;;  mumamo-hi-lock-faces mumamo) "mumamo" "util/mumamo.el" (19221
-;;;;;;  15791))
+;;;;;;  mumamo-hi-lock-faces mumamo) "mumamo" "util/mumamo.el" (19234
+;;;;;;  64747))
 ;;; Generated autoloads from util/mumamo.el
 
 (let ((loads (get 'mumamo 'custom-loads))) (if (member '"mumamo" loads) nil (put 'mumamo 'custom-loads (cons '"mumamo" loads))))
@@ -857,7 +857,7 @@ Return t if VALUE is a multi major mode function.
 ;;;;;;  ssjs-html-mumamo-mode smarty-html-mumamo-mode mjt-html-mumamo-mode
 ;;;;;;  genshi-html-mumamo-mode django-html-mumamo-mode embperl-html-mumamo-mode
 ;;;;;;  mason-html-mumamo-mode nxml-mumamo-mode html-mumamo-mode)
-;;;;;;  "mumamo-fun" "util/mumamo-fun.el" (19218 42182))
+;;;;;;  "mumamo-fun" "util/mumamo-fun.el" (19234 40517))
 ;;; Generated autoloads from util/mumamo-fun.el
 
 (autoload 'html-mumamo-mode "mumamo-fun" "\
@@ -872,9 +872,7 @@ See also `mumamo-alt-php-tags-mode'." t)
 
 (autoload 'mason-html-mumamo-mode "mumamo-fun" "\
 Turn on multiple major modes for Mason using main mode `html-mode'.
-This covers inlined style and javascript and PHP.
-
-See also `mumamo-alt-php-tags-mode'." t)
+This covers inlined style and javascript." t)
 
 (autoload 'embperl-html-mumamo-mode "mumamo-fun" "\
 Turn on multiple major modes for Embperl files with main mode `html-mode'.
@@ -982,7 +980,7 @@ This also covers inlined style and javascript." t)
 ;;;***
 
 ;;;### (autoloads (mumamo-add-region-from-string mumamo-add-region)
-;;;;;;  "mumamo-regions" "util/mumamo-regions.el" (19211 21544))
+;;;;;;  "mumamo-regions" "util/mumamo-regions.el" (19234 48036))
 ;;; Generated autoloads from util/mumamo-regions.el
 
 (autoload 'mumamo-add-region "mumamo-regions" "\
@@ -1012,7 +1010,7 @@ Buffer must be fontified.
 ;;;***
 
 ;;;### (autoloads (n-back-game n-back) "n-back" "util/n-back.el"
-;;;;;;  (19218 42182))
+;;;;;;  (19234 64976))
 ;;; Generated autoloads from util/n-back.el
 
 (let ((loads (get 'n-back 'custom-loads))) (if (member '"n-back" loads) nil (put 'n-back 'custom-loads (cons '"n-back" loads))))
@@ -1118,10 +1116,10 @@ Run the tests specified by SELECTOR and display the results in a buffer.
 ;;;;;;  narrow-to-comment buffer-narrowed-p describe-command ourcomments-ediff-files
 ;;;;;;  find-emacs-other-file better-fringes-mode describe-key-and-map-briefly
 ;;;;;;  ourcomments-move-end-of-line ourcomments-move-beginning-of-line
-;;;;;;  ourcomments-mark-whole-buffer-or-field unfill-individual-paragraphs
+;;;;;;  ourcomments-mark-whole-buffer-or-field fill-dwim unfill-individual-paragraphs
 ;;;;;;  unfill-region unfill-paragraph define-toggle popup-menu-at-point
 ;;;;;;  ourcomments-indirect-fun) "ourcomments-util" "util/ourcomments-util.el"
-;;;;;;  (19218 42182))
+;;;;;;  (19234 48742))
 ;;; Generated autoloads from util/ourcomments-util.el
 
 (autoload 'ourcomments-indirect-fun "ourcomments-util" "\
@@ -1175,6 +1173,11 @@ Unfill the current region.
 
 (autoload 'unfill-individual-paragraphs "ourcomments-util" "\
 Unfill individual paragraphs in the current region.
+
+\(fn)" t nil)
+
+(autoload 'fill-dwim "ourcomments-util" "\
+Fill or unfill paragraph or region.
 
 \(fn)" t nil)
 
@@ -1532,7 +1535,7 @@ Major mode for editing RELAX NG Compact Syntax schemas.
 ;;;***
 
 ;;;### (autoloads (search-form) "search-form" "util/search-form.el"
-;;;;;;  (19210 21948))
+;;;;;;  (19235 974))
 ;;; Generated autoloads from util/search-form.el
 
 (autoload 'search-form "search-form" "\
@@ -1787,7 +1790,7 @@ Display vertical line mode as globally.
 ;;;***
 
 ;;;### (autoloads (nxhtml-download web-vcs-get-files-from-root) "web-vcs"
-;;;;;;  "util/web-vcs.el" (19221 38472))
+;;;;;;  "util/web-vcs.el" (19233 44477))
 ;;; Generated autoloads from util/web-vcs.el
 
 (autoload 'web-vcs-get-files-from-root "web-vcs" "\
@@ -1931,7 +1934,7 @@ wikipedia-draft-data-file.
 ;;;***
 
 ;;;### (autoloads (visual-basic-mode) "visual-basic-mode" "related/visual-basic-mode.el"
-;;;;;;  (19210 21948))
+;;;;;;  (19234 54317))
 ;;; Generated autoloads from related/visual-basic-mode.el
 
 (autoload 'visual-basic-mode "visual-basic-mode" "\
@@ -1957,7 +1960,7 @@ Major mode for editing Template Toolkit files.
 ;;;***
 
 ;;;### (autoloads (smarty-mode smarty) "smarty-mode" "related/smarty-mode.el"
-;;;;;;  (19218 42180))
+;;;;;;  (19234 64467))
 ;;; Generated autoloads from related/smarty-mode.el
 
 (let ((loads (get 'smarty 'custom-loads))) (if (member '"smarty-mode" loads) nil (put 'smarty 'custom-loads (cons '"smarty-mode" loads))))
@@ -2480,7 +2483,7 @@ Major mode for editing PHP code.
 
 ;;;### (autoloads (global-mozadd-mirror-mode mozadd-mirror-mode global-mozadd-refresh-edited-on-save-mode
 ;;;;;;  mozadd-refresh-edited-on-save-mode) "mozadd" "related/mozadd.el"
-;;;;;;  (19173 56140))
+;;;;;;  (19234 47541))
 ;;; Generated autoloads from related/mozadd.el
 
 (autoload 'mozadd-refresh-edited-on-save-mode "mozadd" "\
@@ -2575,26 +2578,19 @@ Major mode for interacting with Firefox via MozRepl.
 
 ;;;***
 
-;;;### (autoloads (iss-mumamo) "iss-mumamo" "related/iss-mumamo.el"
-;;;;;;  (19221 36587))
+;;;### (autoloads (iss-mumamo-mode) "iss-mumamo" "related/iss-mumamo.el"
+;;;;;;  (19234 57945))
 ;;; Generated autoloads from related/iss-mumamo.el
 
-(autoload 'iss-mumamo "iss-mumamo" "\
+(autoload 'iss-mumamo-mode "iss-mumamo" "\
 Turn on multiple major modes Inno Setup .iss files.
-The code section will be in `pascal-mode' while the rest will be
-in `iss-mode'.
-
-\[code]
-
-... this will be in `pascal-mode'. Note the end mark below!
-
-{*** End of CODE **}
-" t)
+The main major mode will be `iss-mode'.
+The [code] section, if any, will be in `pascal-mode'." t)
 
 ;;;***
 
-;;;### (autoloads (iss-mode) "iss-mode" "related/iss-mode.el" (19219
-;;;;;;  1944))
+;;;### (autoloads (iss-mode) "iss-mode" "related/iss-mode.el" (19234
+;;;;;;  54393))
 ;;; Generated autoloads from related/iss-mode.el
 
 (autoload 'iss-mode "iss-mode" "\
@@ -2617,8 +2613,19 @@ Not documented
 
 ;;;***
 
+;;;### (autoloads (flymake-java-1-load) "flymake-java-1" "related/flymake-java-1.el"
+;;;;;;  (19222 14066))
+;;; Generated autoloads from related/flymake-java-1.el
+
+(autoload 'flymake-java-1-load "flymake-java-1" "\
+Not documented
+
+\(fn)" nil nil)
+
+;;;***
+
 ;;;### (autoloads (flymake-css-load) "flymake-css" "related/flymake-css.el"
-;;;;;;  (19213 56810))
+;;;;;;  (19221 53490))
 ;;; Generated autoloads from related/flymake-css.el
 
 (autoload 'flymake-css-load "flymake-css" "\
@@ -2948,7 +2955,7 @@ Not documented
 
 ;;;### (autoloads (wrap-to-fill-column-mode wrap-to-fill-left-marg-modes
 ;;;;;;  wrap-to-fill-left-marg wrap-to-fill) "wrap-to-fill" "util/wrap-to-fill.el"
-;;;;;;  (19218 42182))
+;;;;;;  (19222 64342))
 ;;; Generated autoloads from util/wrap-to-fill.el
 
 (let ((loads (get 'wrap-to-fill 'custom-loads))) (if (member '"wrap-to-fill" loads) nil (put 'wrap-to-fill 'custom-loads (cons '"wrap-to-fill" loads))))
@@ -3011,7 +3018,7 @@ Show xhtml reference for tag name at or before point.
 ;;;***
 
 ;;;### (autoloads (tidy-build-menu tidy) "tidy-xhtml" "nxhtml/tidy-xhtml.el"
-;;;;;;  (19218 42180))
+;;;;;;  (19234 47222))
 ;;; Generated autoloads from nxhtml/tidy-xhtml.el
 
 (let ((loads (get 'tidy 'custom-loads))) (if (member '"tidy-xhtml" loads) nil (put 'tidy 'custom-loads (cons '"tidy-xhtml" loads))))
@@ -3086,8 +3093,9 @@ Check if external modules used by nXhtml are found.
 ;;;### (autoloads (mako-nxhtml-mumamo-mode asp-nxhtml-mumamo-mode
 ;;;;;;  eruby-nxhtml-mumamo-mode jsp-nxhtml-mumamo-mode gsp-nxhtml-mumamo-mode
 ;;;;;;  smarty-nxhtml-mumamo-mode mjt-nxhtml-mumamo-mode genshi-nxhtml-mumamo-mode
-;;;;;;  django-nxhtml-mumamo-mode embperl-nxhtml-mumamo-mode nxhtml-mumamo-mode)
-;;;;;;  "nxhtml-mumamo" "nxhtml/nxhtml-mumamo.el" (19206 60274))
+;;;;;;  mason-nxhtml-mumamo-mode django-nxhtml-mumamo-mode embperl-nxhtml-mumamo-mode
+;;;;;;  nxhtml-mumamo-mode) "nxhtml-mumamo" "nxhtml/nxhtml-mumamo.el"
+;;;;;;  (19234 40557))
 ;;; Generated autoloads from nxhtml/nxhtml-mumamo.el
 
 (autoload 'nxhtml-mumamo-mode "nxhtml-mumamo" "\
@@ -3103,6 +3111,10 @@ This also covers inlined style and javascript." t)
 (autoload 'django-nxhtml-mumamo-mode "nxhtml-mumamo" "\
 Turn on multiple major modes for Django with main mode `nxhtml-mode'.
 This also covers inlined style and javascript." t)
+
+(autoload 'mason-nxhtml-mumamo-mode "nxhtml-mumamo" "\
+Turn on multiple major modes for Mason using main mode `nxhtml-mode'.
+This covers inlined style and javascript." t)
 
 (autoload 'genshi-nxhtml-mumamo-mode "nxhtml-mumamo" "\
 Turn on multiple major modes for Genshi with main mode `nxhtml-mode'.
@@ -3139,8 +3151,8 @@ This also covers inlined style and javascript." t)
 ;;;***
 
 ;;;### (autoloads (nxhtml-validation-header-mode nxhtml-short-tag-help
-;;;;;;  nxhtml-mode) "nxhtml-mode" "nxhtml/nxhtml-mode.el" (19157
-;;;;;;  2168))
+;;;;;;  nxhtml-mode) "nxhtml-mode" "nxhtml/nxhtml-mode.el" (19234
+;;;;;;  40266))
 ;;; Generated autoloads from nxhtml/nxhtml-mode.el
 
 (when (fboundp 'nxml-mode)
@@ -3152,7 +3164,7 @@ when editing XHTML files.\\<nxhtml-mode-map>
 To see an overview in html format do \\[nxhtml-overview].
 
 * Note: Please observe that when loading nXhtml some file
-  associations are done, see `nxhtml-auto-mode-alist'.
+  associations are done, see `nxhtml-setup-file-assoc'.
 
 The nXhtml menu is added by this mode (or actually the minor
 mode `nxhtml-minor-mode') and gives quick access and an overview
@@ -3272,7 +3284,7 @@ This mode may be turned on automatically in two ways:
 
 ;;;### (autoloads (nxhtml-overview nxhtml-global-minor-mode nxhtml-minor-mode
 ;;;;;;  nxhtml-browse-region nxhtml-browse-file nxhtml-edit-with-gimp)
-;;;;;;  "nxhtml-menu" "nxhtml/nxhtml-menu.el" (19221 38557))
+;;;;;;  "nxhtml-menu" "nxhtml/nxhtml-menu.el" (19221 40364))
 ;;; Generated autoloads from nxhtml/nxhtml-menu.el
 
 (autoload 'nxhtml-edit-with-gimp "nxhtml-menu" "\
@@ -3438,8 +3450,8 @@ Query replace in current site's files.
 ;;;***
 
 ;;;### (autoloads (html-pagetoc-rebuild-toc html-pagetoc-insert-toc
-;;;;;;  html-pagetoc) "html-pagetoc" "nxhtml/html-pagetoc.el" (19218
-;;;;;;  42180))
+;;;;;;  html-pagetoc) "html-pagetoc" "nxhtml/html-pagetoc.el" (19234
+;;;;;;  45868))
 ;;; Generated autoloads from nxhtml/html-pagetoc.el
 
 (let ((loads (get 'html-pagetoc 'custom-loads))) (if (member '"html-pagetoc" loads) nil (put 'html-pagetoc 'custom-loads (cons '"html-pagetoc" loads))))
@@ -3525,20 +3537,19 @@ accept it or skip it.
 ;;;***
 
 ;;;### (autoloads nil nil ("autostart.el" "autostart22.el" "etc/schema/schema-path-patch.el"
-;;;;;;  "nxhtml/doc/cedet-build.el" "nxhtml/html-imenu.el" "nxhtml/html-move.el"
-;;;;;;  "nxhtml/html-quote.el" "nxhtml/nxhtml-autoload.el" "nxhtml/nxhtml-strval.el"
-;;;;;;  "nxhtml/nxhtmljs.el" "nxhtml/outline-magic.el" "nxhtml/wtest.el"
-;;;;;;  "related/flymake-helpers.el" "related/flymakemsg.el" "related/flymu.el"
-;;;;;;  "related/php-imenu.el" "tests/angus77-setup-jde.el" "tests/emacstest-suites.el"
+;;;;;;  "nxhtml/html-imenu.el" "nxhtml/html-move.el" "nxhtml/html-quote.el"
+;;;;;;  "nxhtml/nxhtml-autoload.el" "nxhtml/nxhtml-strval.el" "nxhtml/nxhtmljs.el"
+;;;;;;  "nxhtml/outline-magic.el" "nxhtml/wtest.el" "related/flymake-helpers.el"
+;;;;;;  "related/flymakemsg.el" "related/flymu.el" "related/php-imenu.el"
+;;;;;;  "tests/angus77-setup-jde.el" "tests/emacstest-suites.el"
 ;;;;;;  "tests/ert2.el" "tests/hfy-test.el" "tests/inemacs/bug1013.el"
 ;;;;;;  "tests/mumamo-test.el" "tests/nxhtmltest-helpers.el" "tests/temp-test.el"
 ;;;;;;  "util/appmenu-fold.el" "util/buffer-bg.el" "util/css-simple-completion.el"
 ;;;;;;  "util/custsets.el" "util/ecb-batch-compile.el" "util/ffip.el"
-;;;;;;  "util/fupd.el" "util/hfy-cmap.el" "util/htmlfontify.el" "util/key-cat.el"
-;;;;;;  "util/mumamo-aspnet.el" "util/mumamo-trace.el" "util/new-key-seq-widget.el"
-;;;;;;  "util/nxml-mode-os-additions.el" "util/ocr-user.el" "util/org-panel.el"
-;;;;;;  "util/rxi.el" "util/udev-nxhtml.el" "util/useful-commands.el")
-;;;;;;  (19221 38735 0))
+;;;;;;  "util/fupd.el" "util/hfy-cmap.el" "util/key-cat.el" "util/mumamo-aspnet.el"
+;;;;;;  "util/mumamo-trace.el" "util/new-key-seq-widget.el" "util/nxml-mode-os-additions.el"
+;;;;;;  "util/ocr-user.el" "util/org-panel.el" "util/rxi.el" "util/udev-nxhtml.el"
+;;;;;;  "util/useful-commands.el") (19235 1066 890000))
 
 ;;;***
 

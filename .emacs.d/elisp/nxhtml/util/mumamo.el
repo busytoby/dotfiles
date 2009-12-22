@@ -232,17 +232,6 @@
 ;; - There is no way in Emacs to tell a mode not to change
 ;;   fontification when changing to or from that mode.
 ;;
-;; - The dividing into chunk is not that simple as I first thought.  I
-;;   have not gone through the logic of this very carefully.  Perhaps
-;;   that is needed.  The current logic is mainly in
-;;   `mumamo-get-chunk-at' and `mumamo-find-possible-chunk'.  (Some
-;;   other routines tries to behave like `mumamo-find-possible-chunk'
-;;   too: `mumamo-chunk-attr=' and `mumamo-quick-static-chunk'.)
-;;
-;; - One idea that I currently have not used is to check outer major
-;;   mode while dividing into chunks.  This could probably be done
-;;   with a small change to `mumamo-create-chunk-values-at'.  However
-;;   `syntax-ppss' etc must also be handled a bit differently.
 ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -961,8 +950,9 @@ can make exceptions."
 
 ;;(mumamo-indent-get-major-to-use 'nxhtml-mode)
 ;;(mumamo-indent-get-major-to-use 'html-mode)
-(defun mumamo-indent-get-major-to-use (major)
-  (or (cadr (assq major mumamo-indent-major-to-use))
+(defun mumamo-indent-get-major-to-use (major depth)
+  (or (and (= depth 0)
+           (cadr (assq major mumamo-indent-major-to-use)))
       major))
 
 (defcustom mumamo-indent-widen-per-major
@@ -1271,7 +1261,9 @@ Preserves the `buffer-modified-p' state of the current buffer."
   "Protect from recursive calls.")
 
 ;; Fix-me: temporary things for testing new chunk routines.
-(defconst mumamo-find-chunks-level 0)
+(defvar mumamo-find-chunks-level 0)
+(setq mumamo-find-chunks-level 0)
+
 (defvar mumamo-old-tail nil)
 (make-variable-buffer-local 'mumamo-old-tail)
 (put 'mumamo-old-tail 'permanent-local t)
@@ -1756,6 +1748,14 @@ mode."
     (unless chunk (error "There is no MuMaMo chunk here"))
     (goto-char (overlay-start chunk))
     (push-mark (overlay-end chunk) t t)))
+
+(defun mumamo-narrow-to-chunk-inner ()
+  (interactive)
+  (let* ((chunk (mumamo-find-chunks (point) "mumamo-narrow-to-chunk-innner"))
+         (syntax-min-max (mumamo-chunk-syntax-min-max chunk t))
+         (syntax-min (car syntax-min-max))
+         (syntax-max (cdr syntax-min-max)))
+    (narrow-to-region syntax-min syntax-max)))
 
 
 
@@ -5931,13 +5931,16 @@ default values."
       ;;(msgtrc "set-major A: buffer-invisibility-spec=%S" buffer-invisibility-spec)
       ;;(msgtrc "set-major A: word-wrap=%S, cb=%s" word-wrap (current-buffer))
       ;;(mumamo-backtrace "set-major")
-      (save-restriction
-        (let* ((minmax (mumamo-chunk-syntax-min-max chunk t))
-               (min (car minmax))
-               (max (cdr minmax)))
-          (narrow-to-region min max)
-          (funcall major) ;; <-----------------------------------------------
-          ))
+      (let ((here (point)))
+        (save-restriction
+          (let* ((minmax (mumamo-chunk-syntax-min-max chunk t))
+                 (min (car minmax))
+                 (max (cdr minmax))
+                 (here (point)))
+            (narrow-to-region min max)
+            (funcall major) ;; <-----------------------------------------------
+            ))
+        (goto-char here))
       ;;(msgtrc "set-major B: buffer-invisibility-spec=%S" buffer-invisibility-spec)
       ;;(msgtrc "set-major B: word-wrap=%S, cb=%s" word-wrap (current-buffer))
 
@@ -6614,6 +6617,8 @@ afterwards.
 This is the buffer local value of `indent-line-function' when
 mumamo is used."
   (let ((here (point-marker))
+        fontification-functions
+        rng-nxml-auto-validate-flag
         (before-text (<= (current-column) (current-indentation))))
     (mumamo-indent-line-function-1 nil nil nil)
     ;; If the marker was in the indentation part strange things happen
@@ -6667,6 +6672,60 @@ is returned."
 (put 'mumamo-error-ind-0 'error-conditions '(error mumamo-error-ind-0))
 (put 'mumamo-error-ind-0 'error-message "indentation 0 in sub chunk")
 
+(defvar  mumamo-template-indent-buffer nil)
+(make-variable-buffer-local 'mumamo-template-indent-buffer)
+(put 'mumamo-template-indent-buffer 'permanent-local t)
+
+(defun mumamo-get-template-chunk-indent-shift (template-chunk)
+  (assert (overlayp template-chunk) t)
+  (assert (buffer-live-p (overlay-buffer template-chunk)) t)
+  (unless (and mumamo-template-indent-buffer
+               (buffer-live-p mumamo-template-indent-buffer))
+    (setq mumamo-template-indent-buffer
+          (get-buffer-create (concat (buffer-name)
+                                          "-template-indent-buffer")))
+    (with-current-buffer mumamo-template-indent-buffer
+      (let ((major (car (overlay-get template-chunk 'mumamo-major-mode))))
+        (funcall major))))
+  (let ((indentor (overlay-get template-chunk 'mumamo-indentor)))
+    (unless (and indentor
+                 (eq (overlay-buffer indentor)
+                     mumamo-template-indent-buffer))
+      (let* ((this-syntax (mumamo-chunk-syntax-min-max template-chunk t))
+             (this-inner (buffer-substring-no-properties
+                          (cdr this-syntax)
+                          (car this-syntax)))
+             prev-template-chunk
+             (prev (overlay-get template-chunk 'mumamo-prev-chunk)))
+        (while (and prev (not prev-template-chunk))
+          (setq prev (overlay-get prev 'mumamo-prev-chunk))
+          (when prev
+            (setq prev-template-chunk (eq (overlay-get prev 'mumamo-next-indent)
+                                          'mumamo-template-indentor))))
+        (when prev-template-chunk
+          (mumamo-get-template-chunk-indent-shift (overlay-get prev 'mumamo-next-chunk)))
+        (with-current-buffer mumamo-template-indent-buffer
+          (if (not prev-template-chunk)
+              (progn
+                (erase-buffer)
+                (insert this-inner)
+                (indent-to 0))
+            (goto-char (point-max))
+            (insert this-inner)
+            (indent-according-to-mode))
+          (setq indentor (make-overlay (point-at-bol) (point-at-eol)))
+          (overlay-put template-chunk 'mumamo-indentor indentor)
+          (insert "\n")
+          (indent-according-to-mode))))
+    (with-current-buffer mumamo-template-indent-buffer
+      (goto-char (overlay-end indentor))
+      (let ((this-ind (current-indentation))
+            shift)
+        (forward-char)
+        (setq shift (- (current-indentation)
+                       this-ind))
+        shift))))
+
 (defun mumamo-indent-line-function-1 (prev-line-chunks
                                       last-parent-major-indent
                                       entering-submode-arg)
@@ -6690,6 +6749,21 @@ The following rules are used when indenting:
 
 - If the major modes are the same in this and the previous line
   then indentation is done using that major mode.
+
+- Exception: If the chunks are not the same AND there is
+  precisely one chunk between them which have the property value
+  of 'mumamo-next-indent equal to 'mumamo-template-indentor then
+  a special indent using the content of the middle chunk is
+  done. An example of this is eRuby where a middle chunk could
+  look like:
+
+    <% 3.times do %>
+
+  This example will increase indentation for the next line the
+  same way as the chunk content would do in single major mode
+  ruby-mode.
+
+  FIXE-ME: IMPLEMENT THE ABOVE!
 
 - Otherwise if going into a submode indentation is increased by
   `mumamo-submode-indent-offset' (if this is nil then indentation
@@ -6753,6 +6827,14 @@ The following rules are used when indenting:
          (this-line-major3 (mumamo-chunk-major-mode (nth 3 this-line-chunks)))
          (this-depth3 (overlay-get this-line-chunk3 'mumamo-depth))
 
+         (template-indentor (when prev-line-chunk0
+                              (unless (eq this-line-chunk0 prev-line-chunk0)
+                                (let* ((prev (overlay-get this-line-chunk0 'mumamo-prev-chunk))
+                                       (prev-prev (overlay-get prev 'mumamo-prev-chunk)))
+                                  (when (and (eq prev-prev prev-line-chunk0)
+                                             (eq (overlay-get prev-prev 'mumamo-next-indent)
+                                                 'mumamo-template-indentor))
+                                    prev)))))
          this-line-indent-major
          major-indent-line-function
          (main-major (mumamo-main-major-mode))
@@ -6819,7 +6901,24 @@ The following rules are used when indenting:
     (mumamo-msgindent "  leaving-submode=%s, entering-submode=%s" leaving-submode entering-submode)
     ;;(msgtrc "  leaving-submode=%s, entering-submode=%s" leaving-submode entering-submode)
 
+    ;; Fix-me: use this.
+    ;; - clean up after chunk deletion
+    ;; - next line after a template-indentor, what happens?
+    (setq template-indentor nil) ;; fix-me
     (cond
+     ( template-indentor
+       (let ((here (point))
+             (ind-shift (mumamo-get-template-chunk-indent-shift template-indentor)))
+         (message "mumamo-get-template-chunk-indent-shift: shift=%d" ind-shift)
+         (message "current-line: %s" (buffer-substring (point-at-bol) (point-at-eol)))
+         (setq want-indent (+ ind-shift
+                              (progn
+                                (goto-char (overlay-start prev-line-chunk0))
+                                (current-indentation))))
+         (goto-char here))
+       (when (> 0 want-indent)
+         (setq want-indent 0))
+       )
      ( leaving-submode
        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
        ;;;;; First line after submode
@@ -6834,7 +6933,7 @@ The following rules are used when indenting:
        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
        ;;;;; First line in submode
        ;;(setq this-line-indent-major this-line-major0)
-       (setq this-line-indent-major (mumamo-indent-get-major-to-use this-line-major0))
+       (setq this-line-indent-major (mumamo-indent-get-major-to-use this-line-major0 this-depth3))
        ;;(when (and prev-line-major0 (not (eq this-line-major0 prev-line-major0))) (setq this-line-indent-major prev-line-major0))
        (mumamo-msgindent "  this-line-indent-major=%s, major-mode=%s this0=%s" this-line-indent-major major-mode this-line-major0)
        (mumamo-msgindent "  mumamo-submode-indent-offset=%s" mumamo-submode-indent-offset)
@@ -6871,7 +6970,7 @@ The following rules are used when indenting:
        ;; Fix-me: This may be cured by RMS suggestion to
        ;; temporarily set all variables back to global values?
        ;;(setq this-line-indent-major this-line-major0)
-       (setq this-line-indent-major (mumamo-indent-get-major-to-use this-line-major0))
+       (setq this-line-indent-major (mumamo-indent-get-major-to-use this-line-major0 this-depth3))
        (mumamo-msgindent "  this-line-indent-major=%s" this-line-indent-major)
        (unless (eq this-line-indent-major major-mode) (mumamo-set-major this-line-indent-major this-line-chunk0))
        ;; Use the major mode at the beginning of since a sub chunk may
@@ -6955,7 +7054,7 @@ The following rules are used when indenting:
                                                 mumamo-submode-indent-offset)))))))))
              )))))
     (when want-indent
-      ;;(msgtrc "indent-line-to %s at line-beginning=%s" want-indent (line-beginning-position))
+      (msgtrc "indent-line-to %s at line-beginning=%s" want-indent (line-beginning-position))
       (indent-line-to want-indent))
     (goto-char here-on-line)
     ;;(message "exit: %s" (list this-line-chunks last-parent-major-indent))
@@ -7003,10 +7102,23 @@ The following rules are used when indenting:
         ;; (unless (mumamo-indent-use-widen major-mode)
         ;;   (let ((syn-min-max (mumamo-chunk-syntax-min-max chunk nil)))
         ;;     (narrow-to-region (car syn-min-max) (cdr syn-min-max))))
-        (when (mumamo-indent-use-widen major-mode) (widen))
-        ;;(msgtrc "call-indent-line fun=%s" fun)
-        (funcall fun)
-        ))))
+        (let ((mumamo-stop-widen (not (mumamo-indent-use-widen major-mode))))
+          (if (not mumamo-stop-widen)
+              (widen)
+            (let ((syn-min-max (mumamo-chunk-syntax-min-max chunk nil)))
+              (narrow-to-region (car syn-min-max) (cdr syn-min-max))))
+          ;;(msgtrc "call-indent-line fun=%s" fun)
+          (funcall fun)
+          )))))
+
+(defvar mumamo-stop-widen nil)
+(defadvice widen (around
+                  mumamo-ad-widen
+                  activate
+                  compile)
+  (unless (and mumamo-multi-major-mode
+               mumamo-stop-widen)
+    ad-do-it))
 
 (defun mumamo-indent-region-function (start end)
   "Indent the region between START and END."
@@ -7021,6 +7133,8 @@ The following rules are used when indenting:
           (old-rng-validate-mode (when (boundp 'rng-validate-mode) rng-validate-mode))
           (rng-nxml-auto-validate-flag nil)
           (nxhtml-use-imenu nil)
+          fontification-functions
+          rng-nxml-auto-validate-flag
           (nxhtml-mode-hook (mumamo-get-hook-value
                              'nxhtml-mode-hook
                              '(html-imenu-setup)))
@@ -7137,6 +7251,159 @@ when `c-fill-paragraph' is the real function used."
         ;; Fix-me: (run-hooks 'flyspell-prog-mode-hook)
         (funcall mode-predicate)
       t)))
+
+;; (featurep 'cc-engine)
+(eval-after-load 'cc-engine
+  (progn
+    ;; From Alan's mail 2009-12-03: C Mode: acceleration in brace
+    ;; deserts.
+    ;; Fix-me: Should they be here, or...?
+    (put 'c-state-cache 'permanent-local t)
+    (put 'c-state-cache-good-pos 'permanent-local t)
+    (put 'c-state-nonlit-pos-cache 'permanent-local t)
+    (put 'c-state-nonlit-pos-cache-limit 'permanent-local t)
+    (put 'c-state-brace-pair-desert 'permanent-local t)
+    (put 'c-state-point-min 'permanent-local t)
+    (put 'c-state-point-min-lit-type 'permanent-local t)
+    (put 'c-state-point-min-lit-start 'permanent-local t)
+    (put 'c-state-min-scan-pos 'permanent-local t)
+    (put 'c-state-old-cpp-beg 'permanent-local t)
+    (put 'c-state-old-cpp-end 'permanent-local t)
+
+    ))
+
+;; Fix-me: Seems perhaps like c-state-point-min-lit-start is reset in
+;; c-state-mark-point-min-literal because c-state-literal-at returns
+;; nil. (Or is (car lit) nil?)
+
+(defvar mumamo-c-state-cache-init nil)
+(make-variable-buffer-local 'mumamo-c-state-cache-init)
+(put 'mumamo-c-state-cache-init 'permanent-local t)
+
+(defun mumamo-c-state-cache-init ()
+  (unless mumamo-c-state-cache-init
+    (msgtrc "c-state-cache-init running")
+    (setq mumamo-c-state-cache-init t)
+    (setq c-state-cache (or c-state-cache nil))
+    (put 'c-state-cache 'permanent-local t)
+    (setq c-state-cache-good-pos (or c-state-cache-good-pos 1))
+    (put 'c-state-cache-good-pos 'permanent-local t)
+    (setq c-state-nonlit-pos-cache (or c-state-nonlit-pos-cache nil))
+    (put 'c-state-nonlit-pos-cache 'permanent-local t)
+    (setq c-state-nonlit-pos-cache-limit (or c-state-nonlit-pos-cache-limit 1))
+    (put 'c-state-nonlit-pos-cache-limit 'permanent-local t)
+    (setq c-state-brace-pair-desert (or c-state-brace-pair-desert nil))
+    (put 'c-state-brace-pair-desert 'permanent-local t)
+    (setq c-state-point-min (or c-state-point-min 1))
+    (put 'c-state-point-min 'permanent-local t)
+    (setq c-state-point-min-lit-type (or c-state-point-min-lit-type nil))
+    (put 'c-state-point-min-lit-type 'permanent-local t)
+    (setq c-state-point-min-lit-start (or c-state-point-min-lit-start nil))
+    (put 'c-state-point-min-lit-start 'permanent-local t)
+    (setq c-state-min-scan-pos (or c-state-min-scan-pos 1))
+    (put 'c-state-min-scan-pos 'permanent-local t)
+    (setq c-state-old-cpp-beg (or c-state-old-cpp-beg nil))
+    (put 'c-state-old-cpp-beg 'permanent-local t)
+    (setq c-state-old-cpp-end (or c-state-old-cpp-end nil))
+    (put 'c-state-old-cpp-end 'permanent-local t)
+    (c-state-mark-point-min-literal)))
+
+(defadvice c-state-cache-init (around
+                               mumamo-ad-c-state-cache-init
+                               activate
+                               compile
+                               )
+  (if (not mumamo-multi-major-mode)
+      ad-do-it
+    (mumamo-c-state-cache-init)))
+
+;; Fix-me: Have to add per chunk local majors for this one.
+(defun mumamo-c-state-literal-at (here)
+  ;; If position HERE is inside a literal, return (START . END), the
+  ;; boundaries of the literal (which may be outside the accessible bit of the
+  ;; buffer).  Otherwise, return nil.
+  ;;
+  ;; This function is almost the same as `c-literal-limits'.  It differs in
+  ;; that it is a lower level function, and that it rigourously follows the
+  ;; syntax from BOB, whereas `c-literal-limits' uses a "local" safe position.
+  (let* ((is-here (point))
+         (s (syntax-ppss here))
+         (ret (when (or (nth 3 s) (nth 4 s))	; in a string or comment
+                (parse-partial-sexp (point) (point-max)
+                                    nil			 ; TARGETDEPTH
+                                    nil			 ; STOPBEFORE
+                                    s			 ; OLDSTATE
+                                    'syntax-table)	 ; stop at end of literal
+                (cons (nth 8 s) (point)))))
+    (goto-char is-here)
+    ret))
+
+  ;; (save-restriction
+  ;;   (widen)
+  ;;   (let* ((chunk (mumamo-find-chunks (point) "mumamo-c-state-literal-at"))
+  ;;          (syntax-min-max (mumamo-chunk-syntax-min-max chunk t)))
+  ;;     (narrow-to-region (car syntax-min-max) (cdr syntax-min-max)))
+  ;;   (save-excursion
+  ;;     (let ((c c-state-nonlit-pos-cache)
+  ;;           pos npos lit)
+  ;;       ;; Trim the cache to take account of buffer changes.
+  ;;       (while (and c (> (car c) c-state-nonlit-pos-cache-limit))
+  ;;         (setq c (cdr c)))
+  ;;       (setq c-state-nonlit-pos-cache c)
+
+  ;;       (while (and c (> (car c) here))
+  ;;         (setq c (cdr c)))
+  ;;       (setq pos (or (car c) (point-min)))
+
+  ;;       (while (<= (setq npos (+ pos c-state-nonlit-pos-interval))
+  ;;       	   here)
+  ;;         (setq lit (c-state-pp-to-literal pos npos))
+  ;;         (setq pos (or (cdr lit) npos)) ; end of literal containing npos.
+  ;;         (setq c-state-nonlit-pos-cache (cons pos c-state-nonlit-pos-cache)))
+
+  ;;       (if (> pos c-state-nonlit-pos-cache-limit)
+  ;;           (setq c-state-nonlit-pos-cache-limit pos))
+  ;;       (if (< pos here)
+  ;;           (setq lit (c-state-pp-to-literal pos here)))
+  ;;       lit))))
+
+
+(defadvice c-state-literal-at (around
+                               mumamo-ad-c-state-state-literal-at
+                               activate
+                               compile
+                               )
+  (if (not mumamo-multi-major-mode)
+      ad-do-it
+    (mumamo-c-state-literal-at (ad-get-arg 0))))
+
+
+(defun mumamo-c-state-get-min-scan-pos ()
+  ;; Return the lowest valid scanning pos.  This will be the end of the
+  ;; literal enclosing point-min, or point-min itself.
+      (save-restriction
+	(save-excursion
+	  (widen)
+          (mumamo-narrow-to-chunk-inner)
+          (or (and c-state-min-scan-pos
+                   (>= c-state-min-scan-pos (point-min))
+                   c-state-min-scan-pos)
+              (if (not c-state-point-min-lit-start)
+                  (goto-char (point-min))
+                (goto-char c-state-point-min-lit-start)
+                (if (eq c-state-point-min-lit-type 'string)
+                    (forward-sexp)
+                  (forward-comment 1)))
+              (setq c-state-min-scan-pos (point))))))
+
+(defadvice c-state-get-min-scan-pos (around
+                                     mumamo-ad-c-state-get-min-scan-pos-at
+                                     activate
+                                     compile
+                                     )
+  (if (not mumamo-multi-major-mode)
+      ad-do-it
+    (setq ad-return-value (mumamo-c-state-get-min-scan-pos))))
 
 (eval-after-load 'rng-match
 ;;;   (defun rng-match-init-buffer ()
@@ -7868,6 +8135,253 @@ same, do nothing and return nil."
   (setq ad-return-value (mumamo-ad-set-auto-mode-0 (ad-get-arg 0)
                                                    (ad-get-arg 1)
                                                    )))
+
+
+
+(defvar mumamo-sgml-get-context-last-close nil
+  "Last close tag start.
+Only used for outermost level.")
+
+(defun mumamo-sgml-get-context (&optional until)
+  "Determine the context of the current position.
+By default, parse until we find a start-tag as the first thing on a line.
+If UNTIL is `empty', return even if the context is empty (i.e.
+we just skipped over some element and got to a beginning of line).
+
+The context is a list of tag-info structures.  The last one is the tag
+immediately enclosing the current position.
+
+Point is assumed to be outside of any tag.  If we discover that it's
+not the case, the first tag returned is the one inside which we are."
+  (let ((here (point))
+	(stack nil)
+	(ignore nil)
+	(context nil)
+	tag-info
+        last-close)
+    ;; CONTEXT keeps track of the tag-stack
+    ;; STACK keeps track of the end tags we've seen (and thus the start-tags
+    ;;   we'll have to ignore) when skipping over matching open..close pairs.
+    ;; IGNORE is a list of tags that can be ignored because they have been
+    ;;   closed implicitly.
+    ;; LAST-CLOSE is last close tag that can be useful for indentation
+    ;;   when on outermost level.
+    (skip-chars-backward " \t\n")      ; Make sure we're not at indentation.
+    (while
+	(and (not (eq until 'now))
+	     (or stack
+		 (not (if until (eq until 'empty) context))
+		 (not (sgml-at-indentation-p))
+		 (and context
+		      (/= (point) (sgml-tag-start (car context)))
+		      (sgml-unclosed-tag-p (sgml-tag-name (car context)))))
+	     (setq tag-info (ignore-errors (sgml-parse-tag-backward))))
+
+      ;; This tag may enclose things we thought were tags.  If so,
+      ;; discard them.
+      (while (and context
+                  (> (sgml-tag-end tag-info)
+                     (sgml-tag-end (car context))))
+        (setq context (cdr context)))
+
+      (cond
+       ((> (sgml-tag-end tag-info) here)
+	;; Oops!!  Looks like we were not outside of any tag, after all.
+	(push tag-info context)
+	(setq until 'now))
+
+       ;; start-tag
+       ((eq (sgml-tag-type tag-info) 'open)
+        (when (and (null stack)
+                   last-close)
+          (setq last-close 'no-use))
+	(cond
+	 ((null stack)
+	  (if (assoc-string (sgml-tag-name tag-info) ignore t)
+	      ;; There was an implicit end-tag.
+	      nil
+	    (push tag-info context)
+	    ;; We're changing context so the tags implicitly closed inside
+	    ;; the previous context aren't implicitly closed here any more.
+	    ;; [ Well, actually it depends, but we don't have the info about
+	    ;; when it doesn't and when it does.   --Stef ]
+	    (setq ignore nil)))
+	 ((eq t (compare-strings (sgml-tag-name tag-info) nil nil
+				 (car stack) nil nil t))
+	  (setq stack (cdr stack)))
+	 (t
+	  ;; The open and close tags don't match.
+	  (if (not sgml-xml-mode)
+	      (unless (sgml-unclosed-tag-p (sgml-tag-name tag-info))
+		(message "Unclosed tag <%s>" (sgml-tag-name tag-info))
+		(let ((tmp stack))
+		  ;; We could just assume that the tag is simply not closed
+		  ;; but it's a bad assumption when tags *are* closed but
+		  ;; not properly nested.
+		  (while (and (cdr tmp)
+			      (not (eq t (compare-strings
+					  (sgml-tag-name tag-info) nil nil
+					  (cadr tmp) nil nil t))))
+		    (setq tmp (cdr tmp)))
+		  (if (cdr tmp) (setcdr tmp (cddr tmp)))))
+	    (message "Unmatched tags <%s> and </%s>"
+		     (sgml-tag-name tag-info) (pop stack)))))
+
+	(if (and (null stack) (sgml-unclosed-tag-p (sgml-tag-name tag-info)))
+	    ;; This is a top-level open of an implicitly closed tag, so any
+	    ;; occurrence of such an open tag at the same level can be ignored
+	    ;; because it's been implicitly closed.
+	    (push (sgml-tag-name tag-info) ignore)))
+
+       ;; end-tag
+       ((eq (sgml-tag-type tag-info) 'close)
+	(if (sgml-empty-tag-p (sgml-tag-name tag-info))
+	    (message "Spurious </%s>: empty tag" (sgml-tag-name tag-info))
+          ;; Keep track of last close if context will return nil
+          (when (and (not last-close)
+                     (null stack)
+                     (> here (point-at-eol))
+                     (let ((here (point)))
+                       (goto-char (sgml-tag-start tag-info))
+                       (skip-chars-backward " \t")
+                       (prog1
+                           (bolp)
+                         (goto-char here))))
+            (setq last-close tag-info))
+
+	  (push (sgml-tag-name tag-info) stack)))
+       ))
+
+    ;; return context
+    (setq mumamo-sgml-get-context-last-close
+          (when (and last-close
+                     (not (eq last-close 'no-use)))
+            (sgml-tag-start last-close)))
+    context))
+
+(defadvice sgml-get-context (around
+                             mumamo-ad-sgml-get-context
+                             activate
+                             compile)
+  (setq ad-return-value (mumamo-sgml-get-context (ad-get-arg 0))))
+
+(defun mumamo-sgml-calculate-indent (&optional lcon)
+  "Calculate the column to which this line should be indented.
+LCON is the lexical context, if any."
+  (unless lcon (setq lcon (sgml-lexical-context)))
+
+  ;; Indent comment-start markers inside <!-- just like comment-end markers.
+  (if (and (eq (car lcon) 'tag)
+	   (looking-at "--")
+	   (save-excursion (goto-char (cdr lcon)) (looking-at "<!--")))
+      (setq lcon (cons 'comment (+ (cdr lcon) 2))))
+
+  (case (car lcon)
+
+    (string
+     ;; Go back to previous non-empty line.
+     (while (and (> (point) (cdr lcon))
+		 (zerop (forward-line -1))
+		 (looking-at "[ \t]*$")))
+     (if (> (point) (cdr lcon))
+	 ;; Previous line is inside the string.
+	 (current-indentation)
+       (goto-char (cdr lcon))
+       (1+ (current-column))))
+
+    (comment
+     (let ((mark (looking-at "--")))
+       ;; Go back to previous non-empty line.
+       (while (and (> (point) (cdr lcon))
+		   (zerop (forward-line -1))
+		   (or (looking-at "[ \t]*$")
+		       (if mark (not (looking-at "[ \t]*--"))))))
+       (if (> (point) (cdr lcon))
+	   ;; Previous line is inside the comment.
+	   (skip-chars-forward " \t")
+	 (goto-char (cdr lcon))
+	 ;; Skip `<!' to get to the `--' with which we want to align.
+	 (search-forward "--")
+	 (goto-char (match-beginning 0)))
+       (when (and (not mark) (looking-at "--"))
+	 (forward-char 2) (skip-chars-forward " \t"))
+       (current-column)))
+
+    ;; We don't know how to indent it.  Let's be honest about it.
+    (cdata nil)
+    ;; We don't know how to indent it.  Let's be honest about it.
+    (pi nil)
+
+    (tag
+     (goto-char (1+ (cdr lcon)))
+     (skip-chars-forward "^ \t\n")	;Skip tag name.
+     (skip-chars-forward " \t")
+     (if (not (eolp))
+	 (current-column)
+       ;; This is the first attribute: indent.
+       (goto-char (1+ (cdr lcon)))
+       (+ (current-column) sgml-basic-offset)))
+
+    (text
+     (while (looking-at "</")
+       (forward-sexp 1)
+       (skip-chars-forward " \t"))
+     (let* ((here (point))
+	    (unclosed (and ;; (not sgml-xml-mode)
+		       (looking-at sgml-tag-name-re)
+		       (assoc-string (match-string 1)
+				     sgml-unclosed-tags 'ignore-case)
+		       (match-string 1)))
+	    (context
+	     ;; If possible, align on the previous non-empty text line.
+	     ;; Otherwise, do a more serious parsing to find the
+	     ;; tag(s) relative to which we should be indenting.
+	     (if (and (not unclosed) (skip-chars-backward " \t")
+		      (< (skip-chars-backward " \t\n") 0)
+		      (back-to-indentation)
+		      (> (point) (cdr lcon)))
+		 nil
+	       (goto-char here)
+	       (nreverse (sgml-get-context (if unclosed nil 'empty)))))
+	    (there (point)))
+       ;; Ignore previous unclosed start-tag in context.
+       (while (and context unclosed
+		   (eq t (compare-strings
+			  (sgml-tag-name (car context)) nil nil
+			  unclosed nil nil t)))
+	 (setq context (cdr context)))
+       ;; Indent to reflect nesting.
+       (cond
+	;; If we were not in a text context after all, let's try again.
+	((and context (> (sgml-tag-end (car context)) here))
+	 (goto-char here)
+	 (sgml-calculate-indent
+	  (cons (if (memq (sgml-tag-type (car context)) '(comment cdata))
+		    (sgml-tag-type (car context)) 'tag)
+		(sgml-tag-start (car context)))))
+	;; Align on the first element after the nearest open-tag, if any.
+	((and context
+	      (goto-char (sgml-tag-end (car context)))
+	      (skip-chars-forward " \t\n")
+	      (< (point) here) (sgml-at-indentation-p))
+	 (current-column))
+	(t
+	 (goto-char (or (and (null context)
+                             mumamo-sgml-get-context-last-close)
+                        there))
+	 (+ (current-column)
+	    (* sgml-basic-offset (length context)))))))
+
+    (otherwise
+     (error "Unrecognized context %s" (car lcon)))
+
+    ))
+
+(defadvice sgml-calculate-indent (around
+                                  mumamo-ad-sgml-calculate-indent
+                                  activate
+                                  compile)
+  (setq ad-return-value (mumamo-sgml-calculate-indent (ad-get-arg 0))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; The END

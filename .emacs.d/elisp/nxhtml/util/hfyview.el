@@ -102,7 +102,7 @@
     minibuffer-local-filename-completion-map
     minibuffer-local-isearch-map
     minibuffer-local-map
-    minibuffer-local-must-match-filename-map
+    ;; minibuffer-local-must-match-filename-map
     minibuffer-local-must-match-map
     minibuffer-local-ns-map
     viper-minibuffer-map
@@ -295,6 +295,8 @@ With command prefix also show html source in other window."
                 (char-to-string c)))
              (append str)
              ""))
+
+(defvar viper-mode-string) ;; Silence compiler
 
 (defun hfyview-fontify-win-to (win tag whole-buffer)
   "Return html code for window WIN.
